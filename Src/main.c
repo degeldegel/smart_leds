@@ -41,7 +41,7 @@
 #include "stm32f4xx_hal.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "ws2812b_multi_strip_driver.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -52,7 +52,7 @@ TIM_HandleTypeDef htim11;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+extern uint8_t LED_strips[MAX_SUPPORTED_NUM_OF_STRIPS][MAX_SUPPORTED_LEDS_IN_STRIP][NUM_OF_CFG_BYTES_PER_LED];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,6 +69,119 @@ static void MX_TIM11_Init(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+void SnakeTask(void)
+{
+	volatile int led_id, strip_id;
+
+		uint32_t cycle_cntr=0;
+		LD2_GPIO_Port->ODR |= LD2_Pin;
+		for (;;)
+		{
+			for (strip_id=0; strip_id < MAX_ACTIVE_STRIPS; strip_id++)
+			{
+				for (led_id=(MAX_LEDS_IN_STRIP-1); led_id!=0; led_id--)
+				{
+					LED_strips[strip_id][led_id][0] = LED_strips[0][led_id-1][0];
+					LED_strips[strip_id][led_id][1] = LED_strips[0][led_id-1][1];
+					LED_strips[strip_id][led_id][2] = LED_strips[0][led_id-1][2];
+				}
+			}
+			if ((cycle_cntr%15)<8)
+			{
+				uint8_t power = ((cycle_cntr%15 == 0) || (cycle_cntr%15 == 7)) ? 1 :
+								((cycle_cntr%15 == 1) || (cycle_cntr%15 == 6)) ? 5 : 50;
+				for (strip_id=0; strip_id < MAX_ACTIVE_STRIPS; strip_id++)
+				{
+					if ((cycle_cntr%45) < 15)
+					{
+						LED_strips[led_id][0][GREEN] = power;
+						LED_strips[led_id][0][RED]   = 0;
+						LED_strips[led_id][0][BLUE]  = 0;
+					}
+					else if ((cycle_cntr%45) < 30)
+					{
+						LED_strips[led_id][0][GREEN] = 0;
+						LED_strips[led_id][0][RED]   = power;
+						LED_strips[led_id][0][BLUE]  = 0;
+					}
+					else
+					{
+						LED_strips[led_id][0][GREEN] = 0;
+						LED_strips[led_id][0][RED]   = 0;
+						LED_strips[led_id][0][BLUE]  = power;
+					}
+				}
+			}
+			else
+			{
+				for (strip_id=0; strip_id < MAX_ACTIVE_STRIPS; strip_id++)
+				{
+					LED_strips[led_id][0][GREEN] = 0;
+					LED_strips[led_id][0][RED] = 0;
+					LED_strips[led_id][0][BLUE] = 0;
+				}
+			}
+			update_GPIO_all_strips_mask(GPIO_PIN_10 | GPIO_PIN_5 | GPIO_PIN_6);
+			update_driver_mask(GPIOB_PORT);
+			drive_port_strips();
+			wait_x_msec(50);
+			cycle_cntr++;
+		}
+}
+
+void BreatheTask(void)
+{
+	#define POWER_STEPS 25
+	volatile int power_idx, strip_id, led_id;
+
+		LD2_GPIO_Port->ODR |= LD2_Pin;
+		for (;;)
+		{
+			for (power_idx=1; power_idx<POWER_STEPS; power_idx++)
+			{
+				for (strip_id=0; strip_id < MAX_ACTIVE_STRIPS; strip_id++)
+				{
+					uint8_t g_pwr, r_pwr, b_pwr;
+					g_pwr = strip_id==1 ? power_idx*2 : 0;
+					r_pwr = strip_id==1 ? power_idx*2 : 0;
+					b_pwr = strip_id==0 ? power_idx*2 : 0;
+					for (led_id=0; led_id<MAX_LEDS_IN_STRIP; led_id++)
+					{
+						LED_strips[strip_id][led_id][GREEN] = g_pwr;
+						LED_strips[strip_id][led_id][RED]   = r_pwr;
+						LED_strips[strip_id][led_id][BLUE]  = b_pwr;
+					}
+				}
+				update_GPIO_all_strips_mask(GPIO_PIN_5);
+				update_driver_mask(GPIOB_PORT);
+				drive_port_strips();
+				wait_x_msec(20);
+			}
+			for (power_idx=POWER_STEPS; power_idx>0; power_idx--)
+			{
+				for (strip_id=0; strip_id < MAX_ACTIVE_STRIPS; strip_id++)
+				{
+					uint8_t g_pwr, r_pwr, b_pwr;
+					g_pwr = strip_id==1 ? power_idx*2 : 0;
+					r_pwr = strip_id==1 ? power_idx*2 : 0;
+					b_pwr = strip_id==0 ? power_idx*2 : 0;
+
+					for (led_id=0; led_id<MAX_LEDS_IN_STRIP; led_id++)
+					{
+						LED_strips[strip_id][led_id][GREEN] = g_pwr;
+						LED_strips[strip_id][led_id][RED]   = r_pwr;
+						LED_strips[strip_id][led_id][BLUE]  = b_pwr;
+
+					}
+				}
+				update_GPIO_all_strips_mask(GPIO_PIN_5);
+				update_driver_mask(GPIOB_PORT);
+				drive_port_strips();
+				wait_x_msec(20);
+			}
+
+		}
+}
 
 /* USER CODE END 0 */
 
@@ -113,7 +226,7 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-
+	  BreatheTask();
   }
   /* USER CODE END 3 */
 
@@ -306,6 +419,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB10 PB4 PB5 PB6 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
 
