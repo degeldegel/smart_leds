@@ -10,7 +10,6 @@
 
 #define MAX_MATRIX_LENGTH  (32)
 #define MAX_MATRIX_HIEGHT  (32)
-#define MAX_NUMBER_OF_BARS (32)
 
 enum {
 	BAR_DIR_UP    = 0x0,
@@ -25,6 +24,7 @@ typedef struct bar_db
 	uint8_t  size;
 	uint8_t  rep_around_en;
 	uint16_t curr_val;
+	uint8_t  rgb_color[NUM_OF_CFG_BYTES_PER_LED];
 } bar_db_t;
 
 typedef struct led_mat
