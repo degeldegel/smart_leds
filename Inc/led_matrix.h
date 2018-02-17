@@ -58,4 +58,7 @@ int dec_bar(led_mat_t* mat, uint8_t bar_id, uint8_t dec_val);
 /* clears and sets bar to new value */
 int set_bar(led_mat_t* mat, uint8_t bar_id, uint8_t value, uint8_t green, uint8_t red, uint8_t blue);
 
+/* configures bar */
+int conf_bar(led_mat_t* mat, uint8_t bar_id, uint8_t direction, uint8_t value, uint8_t size, uint8_t rep_around_en);
+
 #endif /* LED_MATRIX_H_ */

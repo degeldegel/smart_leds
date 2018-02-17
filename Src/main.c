@@ -192,15 +192,17 @@ void MatrixTask(void)
 	uint8_t bar_id, step;
 	LD2_GPIO_Port->ODR |= LD2_Pin;
 
-	init_mat(&matrix, 16, 16, 1, 0);
+	init_mat(&matrix, 16, 32, 1, 0);
+	for (bar_id=8; bar_id< matrix.num_of_bars; bar_id++)
+		conf_bar(&matrix, bar_id, BAR_DIR_DOWN, 0, 32, 1);
 	while(1)
 	{
 		for (bar_id=0; bar_id< matrix.num_of_bars; bar_id++)
 		{
-			set_bar(&matrix, bar_id, 2, 150, 50, 50);
+			set_bar(&matrix, bar_id, 0, 50, 50, 50);
 		}
 		wait_x_msec(2000);
-		for (step=0; step<6; step++)
+		for (step=0; step<16; step++)
 		{
 			for (bar_id=0; bar_id< matrix.num_of_bars; bar_id++)
 			{
@@ -210,10 +212,13 @@ void MatrixTask(void)
 		}
 		for (bar_id=0; bar_id< matrix.num_of_bars; bar_id++)
 		{
-			set_bar(&matrix, bar_id, 14, 150, 50, 50);
+			uint8_t bar_level = bar_id < 4  ? 10 :
+								bar_id < 8  ? 14 :
+								bar_id < 12 ? 10 : 14;
+			set_bar(&matrix, bar_id, bar_level, 100, 75, 75);
 		}
 		wait_x_msec(2000);
-		for (step=0; step<6; step++)
+		for (step=0; step<8; step++)
 		{
 			for (bar_id=0; bar_id< matrix.num_of_bars; bar_id++)
 			{

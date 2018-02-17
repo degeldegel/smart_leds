@@ -12,6 +12,9 @@
 
 extern uint8_t LED_strips[MAX_SUPPORTED_NUM_OF_STRIPS][MAX_SUPPORTED_LEDS_IN_STRIP][NUM_OF_CFG_BYTES_PER_LED];
 
+/* ===========================================================================================================================
+ * MATRIX DISPLAY FUNCTIONS
+ =============================================================================================================================*/
 /* updates the actual display with the matrix as configured by strip db */
 void display_led_matrix(void)
 {
@@ -20,6 +23,21 @@ void display_led_matrix(void)
 	drive_port_strips();
 }
 
+/* updates pixel in matrix */
+/* for led matrix display to take affect, call display_led_matrix */
+void display_set_pixel(led_mat_t* mat, uint8_t pixel_col, uint8_t pixel_row, uint8_t green, uint8_t red, uint8_t blue)
+{
+	uint16_t led_id_col, led_id;
+	led_id_col = (pixel_row & 0x1) ? (mat->mat_length - pixel_col) : pixel_col;
+	led_id = led_id_col + mat->mat_length*pixel_row;
+	LED_strips[mat->strip_id][led_id][GREEN] = green;
+	LED_strips[mat->strip_id][led_id][RED]   = red;
+	LED_strips[mat->strip_id][led_id][BLUE]  = blue;
+}
+
+/* ===========================================================================================================================
+ * MATRIX DISPLAY BAR FUNCTIONS
+ =============================================================================================================================*/
 /* resets the bar - by clearing strip db */
 /* for led matrix display to take affect, call display_led_matrix */
 void display_reset_bar(led_mat_t* mat, uint8_t bar_id)
@@ -27,61 +45,6 @@ void display_reset_bar(led_mat_t* mat, uint8_t bar_id)
 	uint8_t level_id, max_level;
 	max_level = mat->vert_horiz_ ? MAX_MATRIX_HEIGHT : MAX_MATRIX_LENGTH;
 	for (level_id=0; level_id < max_level; level_id++)
-	{
-		uint16_t led_id_in_level;
-		uint8_t rgb_id;
-		led_id_in_level  = (level_id & 0x1) ? ((mat->num_of_bars-1) - bar_id) : bar_id;
-		led_id_in_level += (mat->num_of_bars)*level_id;
-		for (rgb_id = 0; rgb_id < NUM_OF_CFG_BYTES_PER_LED; rgb_id++)
-		{
-			LED_strips[mat->strip_id][led_id_in_level][rgb_id] = 0;
-		}
-	}
-}
-
-/* updates the strip db with the bar value and color */
-/* for led matrix display to take affect, call display_led_matrix */
-void display_set_bar(led_mat_t* mat, uint8_t bar_id)
-{
-	uint8_t level_id, val_level;
-	val_level = mat->bars[bar_id].curr_val;
-	for (level_id=0; level_id < val_level; level_id++)
-	{
-		uint16_t led_id_in_level, led_id;
-		uint8_t rgb_id;
-		led_id_in_level = (level_id & 0x1) ? ((mat->num_of_bars-1) - bar_id) : bar_id;
-		led_id = led_id_in_level + (mat->num_of_bars)*level_id;
-		for (rgb_id = 0; rgb_id < NUM_OF_CFG_BYTES_PER_LED; rgb_id++)
-		{
-			LED_strips[mat->strip_id][led_id][rgb_id] = mat->bars[bar_id].rgb_color[rgb_id];
-		}
-	}
-}
-
-/* updates the strip db with the increased bar value and color */
-/* for led matrix display to take affect, call display_led_matrix */
-void display_inc_bar(led_mat_t* mat, uint8_t bar_id, uint16_t new_val)
-{
-	uint8_t level_id;
-	for (level_id=(mat->bars[bar_id].curr_val); level_id < new_val; level_id++)
-	{
-		uint16_t led_id_in_level, led_id;
-		uint8_t rgb_id;
-		led_id_in_level = (level_id & 0x1) ? ((mat->num_of_bars-1) - bar_id) : bar_id;
-		led_id = led_id_in_level + (mat->num_of_bars)*level_id;
-		for (rgb_id = 0; rgb_id < NUM_OF_CFG_BYTES_PER_LED; rgb_id++)
-		{
-			LED_strips[mat->strip_id][led_id][rgb_id] = mat->bars[bar_id].rgb_color[rgb_id];
-		}
-	}
-}
-
-/* updates the strip db with the decreased bar value */
-/* for led matrix display to take affect, call display_led_matrix */
-void display_dec_bar(led_mat_t* mat, uint8_t bar_id, uint16_t new_val)
-{
-	int8_t level_id;
-	for (level_id=mat->bars[bar_id].curr_val; level_id >= new_val; level_id--)
 	{
 		uint16_t led_id_in_level, led_id;
 		uint8_t rgb_id;
@@ -94,6 +57,144 @@ void display_dec_bar(led_mat_t* mat, uint8_t bar_id, uint16_t new_val)
 	}
 }
 
+/* updates the strip db with the bar value and color */
+/* for led matrix display to take affect, call display_led_matrix */
+void display_set_bar(led_mat_t* mat, uint8_t bar_id)
+{
+	uint8_t level_id, val_level;
+	switch (mat->bars[bar_id].direction)
+	{
+		case BAR_DIR_UP:
+		{
+			val_level = mat->bars[bar_id].curr_val;
+			for (level_id=0; level_id < val_level; level_id++)
+			{
+				uint16_t led_id_in_level, led_id;
+				uint8_t rgb_id;
+				led_id_in_level = (level_id & 0x1) ? ((mat->num_of_bars-1) - bar_id) : bar_id;
+				led_id = led_id_in_level + (mat->num_of_bars)*level_id;
+				for (rgb_id = 0; rgb_id < NUM_OF_CFG_BYTES_PER_LED; rgb_id++)
+				{
+					LED_strips[mat->strip_id][led_id][rgb_id] = mat->bars[bar_id].rgb_color[rgb_id];
+				}
+			}
+		} break;
+
+		case BAR_DIR_DOWN:
+		{
+			val_level = mat->bars[bar_id].size - mat->bars[bar_id].curr_val;
+			for (level_id=mat->bars[bar_id].size-1; level_id >= val_level; level_id--)
+			{
+				uint16_t led_id_in_level, led_id;
+				uint8_t rgb_id;
+				led_id_in_level = (level_id & 0x1) ? ((mat->num_of_bars-1) - bar_id) : bar_id;
+				led_id = led_id_in_level + (mat->num_of_bars)*level_id;
+				for (rgb_id = 0; rgb_id < NUM_OF_CFG_BYTES_PER_LED; rgb_id++)
+				{
+					LED_strips[mat->strip_id][led_id][rgb_id] = mat->bars[bar_id].rgb_color[rgb_id];
+				}
+			}
+		} break;
+
+		default:
+			return;
+	}
+}
+
+/* updates the strip db with the increased bar value and color */
+/* for led matrix display to take affect, call display_led_matrix */
+void display_inc_bar(led_mat_t* mat, uint8_t bar_id, int16_t new_val)
+{
+	int8_t level_id;
+	switch (mat->bars[bar_id].direction)
+	{
+		case BAR_DIR_UP:
+		{
+			for (level_id=mat->bars[bar_id].curr_val; level_id < new_val; level_id++)
+			{
+				uint16_t led_id_in_level, led_id;
+				uint8_t rgb_id;
+				led_id_in_level = (level_id & 0x1) ? ((mat->num_of_bars-1) - bar_id) : bar_id;
+				led_id = led_id_in_level + (mat->num_of_bars)*level_id;
+				for (rgb_id = 0; rgb_id < NUM_OF_CFG_BYTES_PER_LED; rgb_id++)
+				{
+					LED_strips[mat->strip_id][led_id][rgb_id] = mat->bars[bar_id].rgb_color[rgb_id];
+				}
+			}
+		} break;
+
+		case BAR_DIR_DOWN:
+		{
+			int8_t curr_val;
+			curr_val = mat->bars[bar_id].size - mat->bars[bar_id].curr_val - 1;
+			new_val = mat->bars[bar_id].size - new_val - 1;
+			for (level_id=curr_val; level_id > new_val; level_id--)
+			{
+				uint16_t led_id_in_level, led_id;
+				uint8_t rgb_id;
+				led_id_in_level = (level_id & 0x1) ? ((mat->num_of_bars-1) - bar_id) : bar_id;
+				led_id = led_id_in_level + (mat->num_of_bars)*level_id;
+				for (rgb_id = 0; rgb_id < NUM_OF_CFG_BYTES_PER_LED; rgb_id++)
+				{
+					LED_strips[mat->strip_id][led_id][rgb_id] = mat->bars[bar_id].rgb_color[rgb_id];
+				}
+			}
+
+		} break;
+
+		default:
+			return;
+	}
+}
+
+/* updates the strip db with the decreased bar value */
+/* for led matrix display to take affect, call display_led_matrix */
+void display_dec_bar(led_mat_t* mat, uint8_t bar_id, int16_t new_val)
+{
+	int8_t level_id;
+	switch (mat->bars[bar_id].direction)
+	{
+		case BAR_DIR_UP:
+		{
+			for (level_id=mat->bars[bar_id].curr_val; level_id >= new_val; level_id--)
+			{
+				uint16_t led_id_in_level, led_id;
+				uint8_t rgb_id;
+				led_id_in_level = (level_id & 0x1) ? ((mat->num_of_bars-1) - bar_id) : bar_id;
+				led_id = led_id_in_level + (mat->num_of_bars)*level_id;
+				for (rgb_id = 0; rgb_id < NUM_OF_CFG_BYTES_PER_LED; rgb_id++)
+				{
+					LED_strips[mat->strip_id][led_id][rgb_id] = 0;
+				}
+			}
+		} break;
+
+		case BAR_DIR_DOWN:
+		{
+			uint8_t curr_val;
+			curr_val = mat->bars[bar_id].size - mat->bars[bar_id].curr_val;
+			new_val = mat->bars[bar_id].size - new_val;
+			for (level_id=curr_val; level_id < new_val; level_id++)
+			{
+				uint16_t led_id_in_level, led_id;
+				uint8_t rgb_id;
+				led_id_in_level = (level_id & 0x1) ? ((mat->num_of_bars-1) - bar_id) : bar_id;
+				led_id = led_id_in_level + (mat->num_of_bars)*level_id;
+				for (rgb_id = 0; rgb_id < NUM_OF_CFG_BYTES_PER_LED; rgb_id++)
+				{
+					LED_strips[mat->strip_id][led_id][rgb_id] = 0;
+				}
+			}
+		} break;
+
+		default:
+			return;
+	}
+}
+
+/*==================================================================================================================================
+ * MATRIX BAR FUNCTINS
+ ===================================================================================================================================*/
 /* clears and sets bar to new value */
 int set_bar(led_mat_t* mat, uint8_t bar_id, uint8_t value, uint8_t green, uint8_t red, uint8_t blue)
 {
@@ -165,6 +266,28 @@ int dec_bar(led_mat_t* mat, uint8_t bar_id, uint8_t dec_val)
 	return 0;
 }
 
+/* configures bar */
+int conf_bar(led_mat_t* mat, uint8_t bar_id, uint8_t direction, uint8_t value, uint8_t size, uint8_t rep_around_en)
+{
+	if (( mat->vert_horiz_ && (direction == BAR_DIR_LEFT || direction == BAR_DIR_RIGHT)) ||
+		(!mat->vert_horiz_ && (direction == BAR_DIR_UP   || direction == BAR_DIR_DOWN) ) ||
+		(size > (mat->vert_horiz_ ? MAX_MATRIX_HEIGHT : MAX_MATRIX_LENGTH))              ||
+		(value > size)                                                                   ||
+		(bar_id > mat->num_of_bars))
+	{
+		return 1;
+	}
+	mat->bars[bar_id].direction     = direction;
+	mat->bars[bar_id].curr_val      = value;
+	mat->bars[bar_id].size          = size;
+	mat->bars[bar_id].rep_around_en = rep_around_en;
+	display_set_bar(mat, bar_id);
+	return 0;
+}
+
+/* ========================================================================================================================
+ * MATRIX functions
+ ==========================================================================================================================*/
 /* initializes the matrix, all bars set to zero, and display db and the actual display are updated */
 int init_mat(led_mat_t* mat, uint8_t length, uint8_t height, uint8_t vert_horiz_, uint8_t strip_id)
 {
@@ -194,21 +317,3 @@ int init_mat(led_mat_t* mat, uint8_t length, uint8_t height, uint8_t vert_horiz_
 	return 0;
 }
 
-/* configures bar */
-int conf_bar(led_mat_t* mat, uint8_t bar_id, uint8_t direction, uint8_t value, uint8_t size, uint8_t rep_around_en)
-{
-	if (( mat->vert_horiz_ && (direction == BAR_DIR_LEFT || direction == BAR_DIR_RIGHT)) ||
-		(!mat->vert_horiz_ && (direction == BAR_DIR_UP   || direction == BAR_DIR_DOWN) ) ||
-		(size > (mat->vert_horiz_ ? MAX_MATRIX_HEIGHT : MAX_MATRIX_LENGTH))              ||
-		(value > size)                                                                   ||
-		(bar_id > mat->num_of_bars))
-	{
-		return 1;
-	}
-	mat->bars[bar_id].direction     = direction;
-	mat->bars[bar_id].curr_val      = value;
-	mat->bars[bar_id].size          = size;
-	mat->bars[bar_id].rep_around_en = rep_around_en;
-	display_set_bar(mat, bar_id);
-	return 0;
-}
