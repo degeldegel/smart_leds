@@ -2,20 +2,17 @@
 #include "ws2812b_multi_strip_driver.h"
 
 uint16_t GPIO_strips_mask[MAX_SUPPORTED_LEDS_IN_STRIP * BITS_TO_CONFIGURE_ONE_LED]; /*contains masks of all bits that are zero*/
-uint16_t GPIO_strips_mask_2[MAX_SUPPORTED_LEDS_IN_STRIP * BITS_TO_CONFIGURE_ONE_LED]; /*contains masks of all bits that are zero*/
 uint16_t GPIO_all_strips_mask;
 uint8_t  LED_strips[MAX_SUPPORTED_NUM_OF_STRIPS][MAX_SUPPORTED_LEDS_IN_STRIP][NUM_OF_CFG_BYTES_PER_LED];
 
 void wait_x_msec(int16_t msec_to_wait)
 {
 	volatile int idx;
-	int i, curr_msec;
-	uint16_t curr_zero_mask;
-	SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;
+	volatile int16_t i, curr_msec;
 	for (curr_msec=0; curr_msec < msec_to_wait; curr_msec++)
 	{
 		//wait one milisec
-		for (i=0; i < 28; i++) {idx=i;}
+		for (i=0; i < 5000; i++) {idx=i*i;}
 	}
 }
 

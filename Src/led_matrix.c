@@ -15,7 +15,7 @@ extern uint8_t LED_strips[MAX_SUPPORTED_NUM_OF_STRIPS][MAX_SUPPORTED_LEDS_IN_STR
 /* updates the actual display with the matrix as configured by strip db */
 void display_led_matrix(void)
 {
-	update_GPIO_all_strips_mask(GPIO_PIN_5);
+	update_GPIO_all_strips_mask(GPIO_PIN_10);
 	update_driver_mask(GPIOB_PORT);
 	drive_port_strips();
 }
@@ -63,7 +63,7 @@ void display_set_bar(led_mat_t* mat, uint8_t bar_id)
 void display_inc_bar(led_mat_t* mat, uint8_t bar_id, uint16_t new_val)
 {
 	uint8_t level_id;
-	for (level_id=(mat->bars[bar_id].curr_val + 1); level_id < new_val; level_id++)
+	for (level_id=(mat->bars[bar_id].curr_val); level_id < new_val; level_id++)
 	{
 		uint16_t led_id_in_level, led_id;
 		uint8_t rgb_id;
@@ -80,8 +80,8 @@ void display_inc_bar(led_mat_t* mat, uint8_t bar_id, uint16_t new_val)
 /* for led matrix display to take affect, call display_led_matrix */
 void display_dec_bar(led_mat_t* mat, uint8_t bar_id, uint16_t new_val)
 {
-	uint8_t level_id;
-	for (level_id=(mat->bars[bar_id].curr_val + 1); level_id > new_val; level_id--)
+	int8_t level_id;
+	for (level_id=mat->bars[bar_id].curr_val; level_id >= new_val; level_id--)
 	{
 		uint16_t led_id_in_level, led_id;
 		uint8_t rgb_id;
@@ -89,7 +89,7 @@ void display_dec_bar(led_mat_t* mat, uint8_t bar_id, uint16_t new_val)
 		led_id = led_id_in_level + (mat->num_of_bars)*level_id;
 		for (rgb_id = 0; rgb_id < NUM_OF_CFG_BYTES_PER_LED; rgb_id++)
 		{
-			LED_strips[mat->strip_id][led_id][rgb_id] = mat->bars[bar_id].rgb_color[rgb_id];
+			LED_strips[mat->strip_id][led_id][rgb_id] = 0;
 		}
 	}
 }
@@ -143,6 +143,28 @@ int inc_bar(led_mat_t* mat, uint8_t bar_id, uint8_t inc_val, uint8_t green, uint
 	return 0;
 }
 
+/* updates bar. bar db and the actual display updtaed with the new decreased value and color */
+int dec_bar(led_mat_t* mat, uint8_t bar_id, uint8_t dec_val)
+{
+	int16_t new_val;
+	if (bar_id > mat->num_of_bars) return 1;
+	/* calculate new value */
+	new_val = mat->bars[bar_id].curr_val - dec_val;
+	/* if value larger then bar size, act according to rep_around of the bar.*/
+	if (new_val < 0)
+	{
+		display_reset_bar(mat, bar_id);
+		new_val = 0;
+	}
+	else
+	{
+		display_dec_bar(mat, bar_id, new_val);
+	}
+	mat->bars[bar_id].curr_val = new_val;
+	display_led_matrix();
+	return 0;
+}
+
 /* initializes the matrix, all bars set to zero, and display db and the actual display are updated */
 int init_mat(led_mat_t* mat, uint8_t length, uint8_t height, uint8_t vert_horiz_, uint8_t strip_id)
 {
@@ -154,13 +176,13 @@ int init_mat(led_mat_t* mat, uint8_t length, uint8_t height, uint8_t vert_horiz_
 	mat->mat_height = height;
 	mat->mat_length = length;
 	mat->strip_id = strip_id;
-	mat->num_of_bars = vert_horiz_ ? MAX_MATRIX_LENGTH :  MAX_MATRIX_HEIGHT;
+	mat->num_of_bars = vert_horiz_ ? length :  height;
 	for (bar_idx=0; bar_idx<mat->num_of_bars; bar_idx++)
 	{
 		mat->bars[bar_idx].curr_val  = 0;
 		mat->bars[bar_idx].direction = vert_horiz_ ? BAR_DIR_UP : BAR_DIR_RIGHT;
 		mat->bars[bar_idx].rep_around_en = 1;
-		mat->bars[bar_idx].size = vert_horiz_ ? MAX_MATRIX_HEIGHT : MAX_MATRIX_LENGTH;
+		mat->bars[bar_idx].size = vert_horiz_ ? height : length;
 		mat->bars[bar_idx].rgb_color[GREEN] = 0;
 		mat->bars[bar_idx].rgb_color[RED]   = 0;
 		mat->bars[bar_idx].rgb_color[BLUE]  = 0;

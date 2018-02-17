@@ -19,7 +19,7 @@ enum {
 };
 
 #define GET_STRIP_PORT(strip) (((strip == 0) || (strip == 1) || (strip == 2)) ? GPIOB_PORT : GPIOC_PORT)
-#define GET_STRIP_GPIO(strip) (strip == 0 ? 5 : strip == 1 ? 10 : strip == 2 ? 6 : 0)
+#define GET_STRIP_GPIO(strip) (strip == 0 ? 10 : strip == 1 ? 5 : strip == 2 ? 6 : 0)
 
 void drive_port_strips(void);
 void update_driver_mask(int port_idx);

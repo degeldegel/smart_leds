@@ -42,6 +42,7 @@
 
 /* USER CODE BEGIN Includes */
 #include "ws2812b_multi_strip_driver.h"
+#include "led_matrix.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -183,6 +184,47 @@ void BreatheTask(void)
 		}
 }
 
+void MatrixTask(void)
+{
+
+	//volatile int power_idx, strip_id, led_id;
+	led_mat_t matrix;
+	uint8_t bar_id, step;
+	LD2_GPIO_Port->ODR |= LD2_Pin;
+
+	init_mat(&matrix, 16, 16, 1, 0);
+	while(1)
+	{
+		for (bar_id=0; bar_id< matrix.num_of_bars; bar_id++)
+		{
+			set_bar(&matrix, bar_id, 2, 150, 50, 50);
+		}
+		wait_x_msec(2000);
+		for (step=0; step<6; step++)
+		{
+			for (bar_id=0; bar_id< matrix.num_of_bars; bar_id++)
+			{
+				inc_bar(&matrix, bar_id, (bar_id%4) + 1, ((bar_id%3)==0) ? 150 : 0, ((bar_id%3)==1) ? 150 : 0, ((bar_id%3)==2) ? 150 : 0);
+			}
+			wait_x_msec(2000);
+		}
+		for (bar_id=0; bar_id< matrix.num_of_bars; bar_id++)
+		{
+			set_bar(&matrix, bar_id, 14, 150, 50, 50);
+		}
+		wait_x_msec(2000);
+		for (step=0; step<6; step++)
+		{
+			for (bar_id=0; bar_id< matrix.num_of_bars; bar_id++)
+			{
+				dec_bar(&matrix, bar_id, (bar_id%4) + 1);
+			}
+			wait_x_msec(2000);
+		}
+
+	}
+}
+
 /* USER CODE END 0 */
 
 int main(void)
@@ -223,10 +265,11 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  MatrixTask();
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-	  BreatheTask();
+
   }
   /* USER CODE END 3 */
 

@@ -42,5 +42,20 @@ typedef struct led_mat
 	bar_db_t bars[MAX_NUMBER_OF_BARS];
 } led_mat_t;
 
+//====================================================================================================================
+// API FUNCTIONS
+//====================================================================================================================
+
+/* initializes the matrix, all bars set to zero, and display db and the actual display are updated */
+int init_mat(led_mat_t* mat, uint8_t length, uint8_t height, uint8_t vert_horiz_, uint8_t strip_id);
+
+/* updates bar. bar db and the actual display updtaed with the new increased value and color */
+int inc_bar(led_mat_t* mat, uint8_t bar_id, uint8_t inc_val, uint8_t green, uint8_t red, uint8_t blue);
+
+/* updates bar. bar db and the actual display updtaed with the new decreased value and color */
+int dec_bar(led_mat_t* mat, uint8_t bar_id, uint8_t dec_val);
+
+/* clears and sets bar to new value */
+int set_bar(led_mat_t* mat, uint8_t bar_id, uint8_t value, uint8_t green, uint8_t red, uint8_t blue);
 
 #endif /* LED_MATRIX_H_ */
